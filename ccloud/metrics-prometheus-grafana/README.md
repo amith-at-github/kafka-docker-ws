@@ -1,7 +1,7 @@
 # Prometheus Grafana Integration with Confluent CCloud metrics (/export) endpoint 
 * A Sample POC to quickly test  prometheus integration with  */export* (cCloud Metrics endpoint)
 * Grafana configured with Prometheus as a Datasource for  Dashboard construction.
-* This demo is referring [dabz/ccloudexporter](https://github.com/Dabz/ccloudexporter)  for Grafana dashboard.
+* For Grafana dashboard, This demo is referring to  [dabz/ccloudexporter](https://github.com/Dabz/ccloudexporter) with updtaed metrics keys .
 
 ## How to run
 
