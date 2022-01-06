@@ -109,7 +109,7 @@
         "h": 5,
         "w": 3,
         "x": 0,
-        "y": 1
+        "y": 2
       },
       "id": 19,
       "options": {
@@ -556,12 +556,11 @@
     },
 {
   "id": 46,
-
   "gridPos": {
     "h": 6,
     "w": 20,
     "x": 0,
-    "y": 0
+    "y": 1
   },
   "type": "timeseries",
   "title": "Authentication Count",
@@ -604,12 +603,12 @@
         "mode": "absolute",
         "steps": [
           {
-            "value": null,
-            "color": "green"
+            "color": "green",
+            "value": null
           },
           {
-            "value": 80,
-            "color": "red"
+            "color": "red",
+            "value": 80
           }
         ]
       },
@@ -629,20 +628,18 @@
   },
   "targets": [
     {
-      "expr": "confluent_kafka_server_successful_authentication_count{}",
-      "legendFormat": "{{cluster}}",
-      "interval": "",
-      "exemplar": true,
-      "hide": false,
-      "refId": "A",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
-      }
+      },
+      "exemplar": true,
+      "expr": "confluent_kafka_server_successful_authentication_count{}",
+      "hide": false,
+      "interval": "",
+      "legendFormat": "{{principal_id}}",
+      "refId": "A"
     }
   ],
-  "timeFrom": null,
-  "timeShift": null,
   "datasource": null
 },
 {
@@ -651,55 +648,28 @@
     "h": 5,
     "w": 20,
     "x": 0,
-    "y": 1
+    "y": 7
   },
-  "type": "timeseries",
+  "type": "gauge",
   "title": "Schema Registry count",
   "pluginVersion": "8.3.3",
-  "description": "The sum of partitions in a cluster. Basic cluster max partitions limit is 2048.",
+  "description": "The number of registered schemas",
   "fieldConfig": {
     "defaults": {
-      "custom": {
-        "drawStyle": "line",
-        "lineInterpolation": "linear",
-        "barAlignment": 0,
-        "lineWidth": 1,
-        "fillOpacity": 0,
-        "gradientMode": "none",
-        "spanNulls": false,
-        "showPoints": "auto",
-        "pointSize": 5,
-        "stacking": {
-          "mode": "none",
-          "group": "A"
-        },
-        "axisPlacement": "auto",
-        "axisLabel": "",
-        "scaleDistribution": {
-          "type": "linear"
-        },
-        "hideFrom": {
-          "tooltip": false,
-          "viz": false,
-          "legend": false
-        },
-        "thresholdsStyle": {
-          "mode": "off"
-        }
-      },
-      "color": {
-        "mode": "palette-classic"
-      },
       "thresholds": {
-        "mode": "absolute",
+        "mode": "percentage",
         "steps": [
           {
-            "value": null,
-            "color": "green"
+            "color": "green",
+            "value": null
           },
           {
-            "value": 80,
-            "color": "red"
+            "color": "orange",
+            "value": 70
+          },
+          {
+            "color": "red",
+            "value": 85
           }
         ]
       },
@@ -708,31 +678,32 @@
     "overrides": []
   },
   "options": {
-    "tooltip": {
-      "mode": "single"
+    "reduceOptions": {
+      "values": false,
+      "calcs": [
+        "lastNotNull"
+      ],
+      "fields": ""
     },
-    "legend": {
-      "displayMode": "list",
-      "placement": "bottom",
-      "calcs": []
-    }
+    "orientation": "auto",
+    "showThresholdLabels": false,
+    "showThresholdMarkers": true
   },
   "targets": [
     {
-      "expr": "confluent_kafka_schema_registry_schema_count{}",
-      "legendFormat": "{{cluster}}",
-      "interval": "",
-      "exemplar": true,
-      "hide": false,
-      "refId": "A",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
-      }
+      },
+      "exemplar": true,
+      "expr": "confluent_kafka_schema_registry_schema_count{}",
+      "format": "time_series",
+      "hide": false,
+      "interval": "",
+      "legendFormat": "{{schema_registry_id}}",
+      "refId": "A"
     }
   ],
-  "timeFrom": null,
-  "timeShift": null,
   "datasource": null
 },
 
