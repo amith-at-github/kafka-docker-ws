@@ -7,7 +7,7 @@
 
 ### Step 1
 * git clone Repo
-* cd to "metrics-prometheus-grafana"
+* cd to *"kafka-docker-ws/ccloud/metrics-prometheus-grafana"*
 ### Step 2
 * Edit/Update file ->   *./metrics-prometheus-grafana/config/prometheus/prometheus.yml*
 * Update cCloud *"CLOUD-API-KEY"* and *"CLOUD-API-SECRET"* ( Note: Resource type= cloud Api-Key)
