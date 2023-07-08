@@ -1,0 +1,40 @@
+---
+version: '3.5'
+services:
+  oracleee:
+    image: wnameless/oracle-xe-11g-r2
+    #image: sath89/oracle-ee-11g
+    #image: loliconneko/oracle-ee-11g
+    # note the scripts does not work for the init scripts for loliconnec ee oracle
+    hostname: oracle
+    container_name: oracle-ee
+    ports:
+      - "1521:1521"
+      - "8080:8080"
+    volumes:
+      - ./ora-setup-scripts/01_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./ora-setup-scripts/02_init.sql:/docker-entrypoint-initdb.d/02_init.sql
+    environment:
+      ORACLE_ALLOW_REMOTE: "true"
+    networks:
+      - cp
+
+networks:
+ cp: 
+   name: cp-network 
+
+
+    # FOR EE
+     #  hostname: localhost
+  # port: 1521
+  # sid: EE
+  # service name: EE.oracle.docker
+  # username: system
+  # password: oracle
+
+  # For Xpress edition
+   # "oracle.server": "oracleee",
+   #             "oracle.port": 1521,
+   #             "oracle.sid": "xe",
+   #             "oracle.username": "MYUSER",
+   #             "oracle.password": "oracle",

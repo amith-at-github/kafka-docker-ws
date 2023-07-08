@@ -1,0 +1,393 @@
+#STEP 1:
+docker-compose -f <file-names-in-sequence.yml> up
+
+e.g :  oracle-11g-xe (express edition or enterprise edition)
+       oracle-11g-ee (enterprise edition, run one oracle DB)
+       cp-2.yml ( confluent platform single instance, zk, bk, sr, c3)
+       connect-3.yml ( connect distributed)
+       prometheus-grafana.yml ( for oracle cdc jmx enablement)
+
+
+#STEP 2:
+docker exec -i oracle2 bash -c "ORACLE_SID=XE;export ORACLE_SID;export ORACLE_HOME=/u01/app/oracle/product/11.2.0/xe;/u01/app/oracle/product/11.2.0/xe/bin/sqlplus MYUSER/password@//localhost:1521/XE" << EOF
+create table CUSTOMERS (
+        id NUMBER(10) NOT NULL PRIMARY KEY,
+        first_name VARCHAR(50),
+        last_name VARCHAR(50),
+        email VARCHAR(50),
+        gender VARCHAR(50),
+        club_status VARCHAR(20),
+        comments VARCHAR(4000),
+        create_ts timestamp DEFAULT CURRENT_TIMESTAMP,
+        update_ts timestamp
+);
+
+
+
+
+create table PARTITIONED_MEMBERS (
+        id NUMBER(10) NOT NULL PRIMARY KEY,
+        first_name VARCHAR(50),
+        last_name VARCHAR(50),
+        email VARCHAR(50),
+        gender VARCHAR(50),
+        club_status VARCHAR(20),
+        comments VARCHAR(4000),
+        create_ts timestamp DEFAULT CURRENT_TIMESTAMP,
+        update_ts timestamp
+) PARTITION BY HASH (id)
+   PARTITIONS 6
+
+
+
+insert into CUSTOMERS (id, first_name, last_name, email, gender, club_status, comments) values (1, 'Rica', 'Blaisdell', 'rblaisdell0@rambler.ru', 'Female', 'bronze', 'Universal optimal hierarchy');
+insert into CUSTOMERS (id, first_name, last_name, email, gender, club_status, comments) values (2, 'Ruthie', 'Brockherst', 'rbrockherst1@ow.ly', 'Female', 'platinum', 'Reverse-engineered tangible interface');
+insert into CUSTOMERS (id, first_name, last_name, email, gender, club_status, comments) values (3, 'Mariejeanne', 'Cocci', 'mcocci2@techcrunch.com', 'Female', 'bronze', 'Multi-tiered bandwidth-monitored capability');
+insert into CUSTOMERS (id, first_name, last_name, email, gender, club_status, comments) values (4, 'Hashim', 'Rumke', 'hrumke3@sohu.com', 'Male', 'platinum', 'Self-enabling 24/7 firmware');
+insert into CUSTOMERS (id, first_name, last_name, email, gender, club_status, comments) values (5, 'Hansiain', 'Coda', 'hcoda4@senate.gov', 'Male', 'platinum', 'Centralized full-range approach');
+EOF
+
+
+STEP 3: (BASE config that takes 45 minutes for 10M rows)
+curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+               "connector.class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector",
+               "key.converter": "io.confluent.connect.avro.AvroConverter",
+               "key.converter.schema.registry.url": "http://schema-registry:8081",
+               "value.converter": "io.confluent.connect.avro.AvroConverter",
+               "value.converter.schema.registry.url": "http://schema-registry:8081",
+               "oracle.server": "oracleee",
+               "oracle.port": 1521,
+               "oracle.sid": "xe",
+               "oracle.username": "MYUSER",
+               "oracle.password": "password",
+               "start.from":"snapshot",
+               "behavior.on.unparsable.statement": "log",
+               "table.inclusion.regex": ".*CUSTOMERS.*",
+               "table.topic.name.template": "${databaseName}.${schemaName}.${tableName}",
+               "numeric.mapping": "best_fit",
+               "tasks.max": "12",
+               "snapshot.by.table.partitions": "true",
+               "emit.tombstone.on.delete": "true",
+               "redo.log.consumer.bootstrap.servers":"broker:9092",
+               "redo.log.topic.name": "redo-log-topic",
+               "redo.log.corruption.topic": "redo-log-corrupted",
+               "redo.log.row.fetch.size": 1,
+               "topic.creation.enable": "true",
+               "topic.creation.groups": "redo",
+               "topic.creation.redo.include": "redo-log-topic",
+               "topic.creation.redo.replication.factor": 1,
+               "topic.creation.redo.partitions": 1,
+               "topic.creation.redo.cleanup.policy": "delete",
+               "topic.creation.redo.retention.ms": 1209600000,
+               "topic.creation.default.replication.factor": 1,
+               "topic.creation.default.partitions": 1,
+               "topic.creation.default.cleanup.policy": "delete",
+               "snapshot.by.table.partitions": "true"
+          }' \
+     http://localhost:8083/connectors/cdc-oracle11-source/config | jq .
+
+
+curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+               "connector.class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector",
+               "key.converter": "io.confluent.connect.avro.AvroConverter",
+               "key.converter.schema.registry.url": "http://schema-registry:8081",
+               "value.converter": "io.confluent.connect.avro.AvroConverter",
+               "value.converter.schema.registry.url": "http://schema-registry:8081",
+               "oracle.server": "oracleee",
+               "oracle.port": 1521,
+               "oracle.sid": "EE",
+               "oracle.username": "system",
+               "oracle.password": "oracle",
+               "start.from": "snapshot",
+               "key.template": "${primaryKeyStruct}",
+               "behavior.on.unparsable.statement": "log",
+               "table.inclusion.regex": ".*PARTITIONED_MEMBERS.*",
+               "table.topic.name.template": "${databaseName}.${schemaName}.${tableName}",
+               "numeric.mapping": "best_fit",
+               "tasks.max": "12",
+               "snapshot.by.table.partitions": "true",
+               "enable.metrics.collection": "true",
+               "emit.tombstone.on.delete": "true",
+               "redo.log.consumer.bootstrap.servers":"broker:9092",
+               "redo.log.topic.name": "redo-log-topic",
+               "redo.log.corruption.topic": "redo-log-corrupted",
+               "redo.log.row.fetch.size": 1,
+               "topic.creation.enable": "true",
+               "topic.creation.groups": "redo",
+               "topic.creation.redo.include": "redo-log-topic",
+               "topic.creation.redo.replication.factor": 1,
+               "topic.creation.redo.partitions": 1,
+               "topic.creation.redo.cleanup.policy": "delete",
+               "topic.creation.redo.retention.ms": 1209600000,
+               "topic.creation.default.replication.factor": 1,
+               "topic.creation.default.partitions": 1,
+               "topic.creation.default.cleanup.policy": "delete",
+               "snapshot.by.table.partitions": "true"
+          }' \
+     http://localhost:8083/connectors/cdc-oracle11-source-partitioned/config | jq .
+
+STEP 3.1 :  ( FIRST level changes: single partition : started 7:05: approx 7:35 30 mins)
+STEP 3.2 :  ( second level changes - partition size of 8 : Start: 8:53  -- 15 mins )
+curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+               "connector.class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector",
+               "key.converter": "io.confluent.connect.avro.AvroConverter",
+               "key.converter.schema.registry.url": "http://schema-registry:8081",
+               "value.converter": "io.confluent.connect.avro.AvroConverter",
+               "value.converter.schema.registry.url": "http://schema-registry:8081",
+               "oracle.server": "oracleee",
+               "oracle.port": 1521,
+               "oracle.sid": "EE",
+               "oracle.username": "system",
+               "oracle.password": "oracle",
+               "start.from":"snapshot",
+               "behavior.on.unparsable.statement": "log",
+               "table.inclusion.regex": ".*OMR_SUBSCRIBERS.*",
+               "table.topic.name.template": "${databaseName}.${schemaName}.${tableName}",
+               "numeric.mapping": "best_fit",
+               "tasks.max": "12",
+               "snapshot.by.table.partitions": "true",
+               "emit.tombstone.on.delete": "true",
+               "topic.creation.default.partitions": "8",
+               "connection.pool.max.size": 20,
+               "producer.override.linger.ms": "10",
+               "producer.override.batch.size": "131072",
+               "snapshot.row.fetch.size": "20000",
+               "snapshot.threads.per.task": "4",
+               "max.batch.size": "10000",
+               "max.buffer.size": "30000",
+               "poll.linger.ms": "1000",
+               "redo.log.consumer.bootstrap.servers":"broker:9092",
+               "redo.log.topic.name": "redo-log-topic",
+               "redo.log.corruption.topic": "redo-log-corrupted",
+               "topic.creation.enable": "true",
+               "topic.creation.groups": "redo",
+               "topic.creation.redo.include": "redo-log-topic",
+               "topic.creation.redo.replication.factor": 1,
+               "topic.creation.redo.partitions": 1,
+               "topic.creation.redo.cleanup.policy": "delete",
+               "topic.creation.redo.retention.ms": 1209600000,
+               "topic.creation.default.replication.factor": 1,
+               "topic.creation.default.cleanup.policy": "delete"
+          }' \
+     http://localhost:8083/connectors/cdc-oracle11-source/config | jq .
+STEP 3.3 : (START 10:01PM : End 10:13 P.M  12 min 10 million rows)
+curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+               "connector.class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector",
+               "key.converter": "io.confluent.connect.avro.AvroConverter",
+               "key.converter.schema.registry.url": "http://schema-registry:8081",
+               "value.converter": "io.confluent.connect.avro.AvroConverter",
+               "value.converter.schema.registry.url": "http://schema-registry:8081",
+               "oracle.server": "oracleee",
+               "oracle.port": 1521,
+               "oracle.sid": "EE",
+               "oracle.username": "system",
+               "oracle.password": "oracle",
+               "start.from":"snapshot",
+               "behavior.on.unparsable.statement": "log",
+               "table.inclusion.regex": ".*OMR_SUBSCRIBERS.*",
+               "table.topic.name.template": "${databaseName}.${schemaName}.${tableName}",
+               "numeric.mapping": "best_fit",
+               "tasks.max": "12",
+               "snapshot.by.table.partitions": "true",
+               "emit.tombstone.on.delete": "true",
+               "topic.creation.default.partitions": "8",
+               "connection.pool.max.size": 20,
+               "producer.override.linger.ms": "10",
+               "producer.override.batch.size": "500000",
+               "snapshot.row.fetch.size": "50000",
+               "snapshot.threads.per.task": "4",
+               "redo.log.consumer.bootstrap.servers":"broker:9092",
+               "redo.log.topic.name": "redo-log-topic",
+               "redo.log.corruption.topic": "redo-log-corrupted",
+               "topic.creation.enable": "true",
+               "topic.creation.groups": "redo",
+               "topic.creation.redo.include": "redo-log-topic",
+               "topic.creation.redo.replication.factor": 1,
+               "topic.creation.redo.partitions": 1,
+               "topic.creation.redo.cleanup.policy": "delete",
+               "topic.creation.redo.retention.ms": 1209600000,
+               "topic.creation.default.replication.factor": 1,
+               "topic.creation.default.cleanup.policy": "delete"
+          }' \
+     http://localhost:8083/connectors/cdc-oracle11-source/config | jq .
+
+
+STEP 3.4: (START: 11:13 PM tp 11:24 .. 10 min for 10 million message of 1kb)
+curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+               "connector.class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector",
+               "key.converter": "io.confluent.connect.avro.AvroConverter",
+               "key.converter.schema.registry.url": "http://schema-registry:8081",
+               "value.converter": "io.confluent.connect.avro.AvroConverter",
+               "value.converter.schema.registry.url": "http://schema-registry:8081",
+               "oracle.server": "oracleee",
+               "oracle.port": 1521,
+               "oracle.sid": "EE",
+               "oracle.username": "system",
+               "oracle.password": "oracle",
+               "start.from":"snapshot",
+               "behavior.on.unparsable.statement": "log",
+               "table.inclusion.regex": ".*OMR_SUBSCRIBERS.*",
+               "table.topic.name.template": "${databaseName}.${schemaName}.${tableName}",
+               "numeric.mapping": "best_fit",
+               "tasks.max": "12",
+               "snapshot.by.table.partitions": "true",
+               "emit.tombstone.on.delete": "true",
+               "topic.creation.default.partitions": "12",
+               "connection.pool.max.size": 20,
+               "producer.override.linger.ms": "10",
+               "producer.override.batch.size": "500000",
+               "snapshot.row.fetch.size": "50000",
+               "snapshot.threads.per.task": "4",
+               "max.batch.size": "10000",
+               "max.buffer.size": "30000",
+               "poll.linger.ms": "1000",
+               "redo.log.consumer.bootstrap.servers":"broker:9092",
+               "redo.log.topic.name": "redo-log-topic",
+               "redo.log.corruption.topic": "redo-log-corrupted",
+               "topic.creation.enable": "true",
+               "topic.creation.groups": "redo",
+               "topic.creation.redo.include": "redo-log-topic",
+               "topic.creation.redo.replication.factor": 1,
+               "topic.creation.redo.partitions": 1,
+               "topic.creation.redo.cleanup.policy": "delete",
+               "topic.creation.redo.retention.ms": 1209600000,
+               "topic.creation.default.replication.factor": 1,
+               "topic.creation.default.cleanup.policy": "delete"
+          }' \
+     http://localhost:8083/connectors/cdc-oracle11-source/config | jq .
+
+STEP 4:
+
+#Validate  and add these for performance tuning:
+               "connection.pool.max.size": 20,  #default is 1 ( without this it took 30 minutes to load to oracle and 35 minutes for connector to do its work.. only thing is tasks.max of 12)
+
+#SEcond: Engineering recomendation
+https://confluentinc.atlassian.net/wiki/spaces/CONNECT/pages/1962707799/Linear+Testing+with+Distributed+Tasks+CCDB+version
+                "topic.creation.default.partitions": "8",
+                "connection.pool.max.size": 20, 
+
+                "producer.override.linger.ms": "10",
+                "producer.override.batch.size": "131072",
+                
+                "snapshot.row.fetch.size": "20000",
+                "snapshot.threads.per.task": "4",
+                "max.batch.size": "10000",
+                "max.buffer.size": "30000",
+                "poll.linger.ms": "1000",
+
+  create this topic: EE.SYSTEM.OMR_SUBSCRIBERS  
+
+  #SECOND-1:
+  "snapshot.row.fetch.size": "50000",
+  "producer.override.batch.size": "500000",
+
+  #THIRD: next set of changes look for consumer side cleanups
+  redo.log.row.fetch.size: "100000"  (default is 10, set it based on the volume of data to be consumed )  
+
+  #FOURT: introduce max.batch , max.bufeer.adn poll.linger    
+
+  #FOR NEXT WEEKS:
+  https://support.confluent.io/hc/en-us/articles/11719435438740-How-to-reduce-the-number-of-connections-made-by-Oracle-CDC-connector
+  "connection.pool.max.size": "2",
+"connection.pool.inactive.timeout.ms": "60000",
+"connection.pool.check.interval.timeout.ms": "30000",
+"connection.pool.property.cycle.interval.ms": "30000",    
+
+
+
+
+select * from v$option where parameter = 'Partitioning';
+
+select * from v$VERSION;
+
+select * from v$VERSION;
+
+
+CREATE SEQUENCE MSISDN
+INCREMENT BY 1
+START WITH 1
+
+# 1 million rows takes 5 minutes
+insert into OMR_SUBSCRIBERS (IMSI, MSISDN, ENABLER_ZONE, MARKET, SUB_MARKET, LOCAL_MARKET, ACTIVE_DATE) 
+select TO_CHAR(MSISDN.nextval), TO_CHAR(MSISDN.nextval),'SER', 'TNK', 'NWS', 'BOS', SYSDATE from dual 
+connect by level <= 1000000
+
+alter database add supplemental log data (all) columns
+
+select SUPPLEMENTAL_LOG_DATA_MIN, SUPPLEMENTAL_LOG_DATA_PK,
+SUPPLEMENTAL_LOG_DATA_UI from v$database;
+
+
+SELECT * FROM OMR_SUBSCRIBERS LIMIT 100
+
+SELECT count(*) FROM OMR_SUBSCRIBERS
+
+
+STEP: VALIDATE
+
+# total number of records in kafka topic
+docker exec kcat \
+    kcat -b localhost:9092 -C -t EE.SYSTEM.OMR_SUBSCRIBERS -e -q | \
+    wc -l
+
+
+-- look for logs: Completed 1 snapshots with 
+
+
+
+
+---  
+  1) updating the conflunt hub cdc connetor  2.6.1
+  2) run the test with the new docker box : 
+
+  3) TEST scenarios: Create a new topic with 6 partions.. ( run test with oracleDB also partitoioned)
+
+  4) TEST scenarios:
+      "connection.pool.max.size": 20,
+      "producer.override.linger.ms": "10",
+      "producer.override.batch.size": "500000",
+      "snapshot.row.fetch.size": "50000",
+      "snapshot.threads.per.task": "4",
+
+  Try proviing box details: vCPU, toal memory 
+
+
+
+
+# OTHER commands:
+
+ ALTER DATABASE ARCHIVELOG;
+ SELECT VERSION FROM V$INSTANCE
+ ALTER DATABASE ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
+ use system;
+ SELECT current_scn FROM V$DATABASE
+ select * from V$DATABASE
+ select * from   V$LOGMNR_LOGS
+
+                     SELECT SEQUENCE# FROM V$LOG WHERE STATUS = 'CURRENT'
+
+ SELECT * FROM V$LOGFILE;
+
+ select * from V$LOG_HISTORY
+
+ select * from V$LOG
+
+ select * from V$LOGMNR_CONTENTS;
+select * from V$DATABASE
+
+
+
+
+      
+
+-- 
