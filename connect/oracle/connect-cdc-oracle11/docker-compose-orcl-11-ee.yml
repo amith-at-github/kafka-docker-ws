@@ -43,6 +43,7 @@ networks:
    #             "oracle.password": "oracle",
 
 
+
 #    STEPS 1:
 
 #     create table PARTITIONED_MEMBERS (
@@ -59,6 +60,8 @@ networks:
 #     PARTITIONS 6
 
 
+
+
 #    STEPS 2:
 # insert into PARTITIONED_MEMBERS (id, first_name, last_name, email, gender, club_status, comments) values (1, 'Rica', 'Blaisdell', 'rblaisdell0@rambler.ru', 'Female', 'bronze', 'Universal optimal hierarchy');
 # insert into PARTITIONED_MEMBERS (id, first_name, last_name, email, gender, club_status, comments) values (2, 'Ruthie', 'Brockherst', 'rbrockherst1@ow.ly', 'Female', 'platinum', 'Reverse-engineered tangible interface');
@@ -70,6 +73,31 @@ networks:
 # insert into PARTITIONED_MEMBERS (id, first_name, last_name, email, gender, club_status, comments) values (8, 'Mariejeanne', 'Cocci', 'mcocci2@techcrunch.com', 'Female', 'bronze', 'Multi-tiered bandwidth-monitored capability');
 # insert into PARTITIONED_MEMBERS (id, first_name, last_name, email, gender, club_status, comments) values (9, 'Hashim', 'Rumke', 'hrumke3@sohu.com', 'Male', 'platinum', 'Self-enabling 24/7 firmware');
 # insert into PARTITIONED_MEMBERS (id, first_name, last_name, email, gender, club_status, comments) values (10, 'Hansiain', 'Coda', 'hcoda4@senate.gov', 'Male', 'platinum', 'Centralized full-range approach');
+
+
+#NON-partitioned table
+#   create table customers (
+#          id NUMBER(10) NOT NULL PRIMARY KEY,
+#          first_name VARCHAR(50),
+#          last_name VARCHAR(50),
+#          email VARCHAR(50),
+#          gender VARCHAR(50),
+#          club_status VARCHAR(20),
+#          comments VARCHAR(4000),
+#          create_ts timestamp DEFAULT CURRENT_TIMESTAMP,
+#          update_ts timestamp
+# ) 
+
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (1, 'Rica', 'Blaisdell', 'rblaisdell0@rambler.ru', 'Female', 'bronze', 'Universal optimal hierarchy');
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (2, 'Ruthie', 'Brockherst', 'rbrockherst1@ow.ly', 'Female', 'platinum', 'Reverse-engineered tangible interface');
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (3, 'Mariejeanne', 'Cocci', 'mcocci2@techcrunch.com', 'Female', 'bronze', 'Multi-tiered bandwidth-monitored capability');
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (4, 'Hashim', 'Rumke', 'hrumke3@sohu.com', 'Male', 'platinum', 'Self-enabling 24/7 firmware');
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (5, 'Hansiain', 'Coda', 'hcoda4@senate.gov', 'Male', 'platinum', 'Centralized full-range approach');
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (6, 'Rica', 'Blaisdell', 'rblaisdell0@rambler.ru', 'Female', 'bronze', 'Universal optimal hierarchy');
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (7, 'Ruthie', 'Brockherst', 'rbrockherst1@ow.ly', 'Female', 'platinum', 'Reverse-engineered tangible interface');
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (8, 'Mariejeanne', 'Cocci', 'mcocci2@techcrunch.com', 'Female', 'bronze', 'Multi-tiered bandwidth-monitored capability');
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (9, 'Hashim', 'Rumke', 'hrumke3@sohu.com', 'Male', 'platinum', 'Self-enabling 24/7 firmware');
+# insert into customers (id, first_name, last_name, email, gender, club_status, comments) values (10, 'Hansiain', 'Coda', 'hcoda4@senate.gov', 'Male', 'platinum', 'Centralized full-range approach');
 
 ## THIS CONFIGURATION: CREATES DUPLICATES
 # curl -X PUT \
@@ -125,8 +153,8 @@ networks:
 #                "oracle.server": "oracleee",
 #                "oracle.port": 1521,
 #                "oracle.sid": "EE",
-#                "oracle.username": "system",
-#                "oracle.password": "oracle",
+#                "oracle.username": "MYUSER1",
+#                "oracle.password": "testpwduser1",
 #                "start.from": "snapshot",
 #                "key.template": "${primaryKeyStruct}",
 #                "behavior.on.unparsable.statement": "log",
@@ -154,8 +182,144 @@ networks:
 #                "snapshot.by.table.partitions": "true",
 #                "heartbeat.interval.ms": "60000"
 #           }' \
-#      http://localhost:8083/connectors/cdc-oracle11-source-partitioned/config | jq .
+#      http://localhost:8083/connectors/cdc-oracle11-source-partitioned-usr1/config | jq .
 
 
 
+# curl -X PUT \
+#      -H "Content-Type: application/json" \
+#      --data '{
+#                "connector.class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector",
+#                "key.converter": "io.confluent.connect.avro.AvroConverter",
+#                "key.converter.schema.registry.url": "http://schema-registry:8081",
+#                "value.converter": "io.confluent.connect.avro.AvroConverter",
+#                "value.converter.schema.registry.url": "http://schema-registry:8081",
+#                "oracle.server": "oracleee",
+#                "oracle.port": 1521,
+#                "oracle.sid": "EE",
+#                "oracle.username": "MYUSER2",
+#                "oracle.password": "testpwduser2",
+#                "start.from": "snapshot",
+#                "key.template": "${primaryKeyStruct}",
+#                "behavior.on.unparsable.statement": "log",
+#                "table.inclusion.regex": ".*PARTITIONED_MEMBERS.*",
+#                "table.topic.name.template": "${databaseName}.${schemaName}.${tableName}2",
+#                "numeric.mapping": "best_fit",
+#                "tasks.max": "12",
+#                "snapshot.by.table.partitions": "true",
+#                "enable.metrics.collection": "true",
+#                "emit.tombstone.on.delete": "true",
+#                "redo.log.consumer.bootstrap.servers":"broker:9092",
+#                "redo.log.topic.name": "redo-log-topic2",
+#                "redo.log.corruption.topic": "redo-log-corrupted2",
+#                "redo.log.row.fetch.size": 1,
+#                "topic.creation.enable": "true",
+#                "topic.creation.groups": "redo",
+#                "topic.creation.redo.include": "redo-log-topic2",
+#                "topic.creation.redo.replication.factor": 1,
+#                "topic.creation.redo.partitions": 1,
+#                "topic.creation.redo.cleanup.policy": "delete",
+#                "topic.creation.redo.retention.ms": 1209600000,
+#                "topic.creation.default.replication.factor": 1,
+#                "topic.creation.default.partitions": 1,
+#                "topic.creation.default.cleanup.policy": "delete",
+#                "snapshot.by.table.partitions": "true",
+#                "heartbeat.interval.ms": "60000"
+#           }' \
+#      http://localhost:8083/connectors/cdc-oracle11-source-partitioned-usr2/config | jq .
 
+
+#THIS CONFIGURATION WORKS PROPERLY FOR NON-PARTIONTINED TABLE WITHOUT ANY DUPLICATES
+curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+               "connector.class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector",
+               "key.converter": "io.confluent.connect.avro.AvroConverter",
+               "key.converter.schema.registry.url": "http://schema-registry:8081",
+               "value.converter": "io.confluent.connect.avro.AvroConverter",
+               "value.converter.schema.registry.url": "http://schema-registry:8081",
+               "oracle.server": "oracleee",
+               "oracle.port": 1521,
+               "oracle.sid": "EE",
+               "oracle.username": "MYUSER1",
+               "oracle.password": "testpwduser1",
+               "start.from": "snapshot",
+               "behavior.on.unparsable.statement": "log",
+               "table.inclusion.regex": "SYSTEM[.]CUSTOMERS",
+               "table.topic.name.template": "${databaseName}.${schemaName}.${tableName}",
+               "numeric.mapping": "best_fit",
+               "tasks.max": "3",
+               "enable.metrics.collection": "true",
+               "emit.tombstone.on.delete": "true",
+               "redo.log.consumer.bootstrap.servers":"broker:9092",
+               "redo.log.topic.name": "redo-log-topic",
+               "redo.log.corruption.topic": "redo-log-corrupted",
+               "redo.log.row.fetch.size": 1,
+               "topic.creation.enable": "true",
+               "topic.creation.groups": "redo",
+               "topic.creation.redo.include": "redo-log-topic",
+               "topic.creation.redo.replication.factor": 1,
+               "topic.creation.redo.partitions": 1,
+               "topic.creation.redo.cleanup.policy": "delete",
+               "topic.creation.redo.retention.ms": 1209600000,
+               "topic.creation.default.replication.factor": 1,
+               "topic.creation.default.partitions": 1,
+               "topic.creation.default.cleanup.policy": "delete",
+               "heartbeat.interval.ms": "60000"
+          }' \
+     http://localhost:8083/connectors/cdc-oracle11-source-non-partitioned-usr1/config | jq .
+
+
+
+curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+               "connector.class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector",
+               "key.converter": "io.confluent.connect.avro.AvroConverter",
+               "key.converter.schema.registry.url": "http://schema-registry:8081",
+               "value.converter": "io.confluent.connect.avro.AvroConverter",
+               "value.converter.schema.registry.url": "http://schema-registry:8081",
+               "oracle.server": "oracleee",
+               "oracle.port": 1521,
+               "oracle.sid": "EE",
+               "oracle.username": "MYUSER2",
+               "oracle.password": "testpwduser2",
+               "start.from": "snapshot",
+               "behavior.on.unparsable.statement": "log",
+               "table.inclusion.regex": "SYSTEM[.]CUSTOMERS",
+               "table.topic.name.template": "${databaseName}.${schemaName}.${tableName}2",
+               "numeric.mapping": "best_fit",
+               "tasks.max": "3",
+               "enable.metrics.collection": "true",
+               "emit.tombstone.on.delete": "true",
+               "redo.log.consumer.bootstrap.servers":"broker:9092",
+               "redo.log.topic.name": "redo-log-topic2",
+               "redo.log.corruption.topic": "redo-log-corrupted2",
+               "redo.log.row.fetch.size": 1,
+               "topic.creation.enable": "true",
+               "topic.creation.groups": "redo",
+               "topic.creation.redo.include": "redo-log-topic2",
+               "topic.creation.redo.replication.factor": 1,
+               "topic.creation.redo.partitions": 1,
+               "topic.creation.redo.cleanup.policy": "delete",
+               "topic.creation.redo.retention.ms": 1209600000,
+               "topic.creation.default.replication.factor": 1,
+               "topic.creation.default.partitions": 1,
+               "topic.creation.default.cleanup.policy": "delete",
+               "heartbeat.interval.ms": "60000"
+          }' \
+     http://localhost:8083/connectors/cdc-oracle11-source-non-partitioned-usr2/config | jq .
+
+## SQL Troubleshooting Queries:
+# select username,password from dba_users;
+# alter user MYUSER2 identified by password;
+
+# ALTER USER MYUSER1 IDENTIFIED BY password ACCOUNT UNLOCK;
+
+# select * from USER_ROLE_PRIVS where USERNAME='MYUSER1';
+# select * from USER_TAB_PRIVS where Grantee = 'MYUSER1';
+# select * from USER_SYS_PRIVS where USERNAME = 'MYUSER1';
+
+
+# 999866 : cdc-oracle11-source-non-partitioned-usr1
+# 999866 : cdc-oracle11-source-non-partitioned-usr2
