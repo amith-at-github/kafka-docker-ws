@@ -81,7 +81,7 @@ services:
     depends_on:
       - zookeeper
       - broker
-      - schema-registry
+    #  - schema-registry
       # - connect
       # - ksqldb-server
     ports:
@@ -89,6 +89,7 @@ services:
       # - "9101:9101"
     volumes:
       - ./prom-grafana/assets/jmx-exporter:/usr/share/jmx-exporter/
+      - ./c3-ui:/etc/confluent-control-center/
     environment:
       CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
       CONTROL_CENTER_CONNECT_CONNECT-DEFAULT_CLUSTER: 'connect:8083'
@@ -100,6 +101,9 @@ services:
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
+      CONTROL_CENTER_UI_BASEPATH: '/amith/'
+      CONTROL_CENTER_UI_EXTERNAL_CSS_FILES: ./something.css
+      CONTROL_CENTER_UI_EXTERNAL_JS_FILES: ./something.js
       # KAFKA_JMX_PORT: 1234
 #      KAFKA_JMX_HOSTNAME: localhost
       EXTRA_ARGS: -javaagent:/usr/share/jmx-exporter/jmx_prometheus_javaagent-0.19.0.jar=1234:/usr/share/jmx-exporter/zookeeper.yml
